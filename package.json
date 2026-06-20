@@ -1,0 +1,13 @@
+{
+  "name": "ohio-rate-scraper",
+  "version": "1.0.0",
+  "description": "Scrapes Ohio electricity supplier rates from energychoice.ohio.gov",
+  "main": "scraper.js",
+  "scripts": {
+    "scrape": "node scraper.js",
+    "install-browser": "npx playwright install chromium"
+  },
+  "dependencies": {
+    "playwright": "^1.44.0"
+  }
+}

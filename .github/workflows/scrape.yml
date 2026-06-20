@@ -1,0 +1,80 @@
+# GitHub Actions Workflow — Ohio Rate Scraper
+# 
+# What this does:
+#   Runs your scraper automatically every Monday at 8am Ohio time.
+#   Commits the fresh rates.json back to your repo.
+#   Vercel sees the new commit and auto-redeploys your app.
+#
+# Cost: FREE (GitHub Actions free tier = 2,000 minutes/month. This uses ~5 min/week)
+#
+# Setup steps (one time only):
+#   1. Push your project to GitHub
+#   2. This file goes in .github/workflows/scrape.yml
+#   3. That's it — GitHub runs it automatically every Monday
+
+name: Scrape Ohio Electricity Rates
+
+on:
+  # Run every Monday at 1pm UTC = 8am Ohio time (EST) / 9am (EDT)
+  schedule:
+    - cron: "0 13 * * 1"
+
+  # Also lets you trigger it manually from GitHub's Actions tab
+  # (useful for testing or getting fresh data on demand)
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    name: Scrape PUCO Rates
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      # Step 1: Check out your code
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Node.js
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          cache-dependency-path: "scraper/package.json"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        working-directory: ./scraper
+        run: npm install
+
+      # Step 4: Install Playwright's Chromium browser
+      - name: Install Chromium
+        working-directory: ./scraper
+        run: npx playwright install chromium --with-deps
+
+      # Step 5: Run the scraper
+      - name: Run scraper
+        working-directory: ./scraper
+        run: node scraper.js
+
+      # Step 6: Copy fresh rates.json to where your React app reads it
+      - name: Copy rates to app
+        run: cp scraper/data/rates.json public/rates.json
+
+      # Step 7: Commit and push the fresh data back to GitHub
+      # Vercel watches your repo — a new commit triggers an auto-redeploy
+      - name: Commit fresh rates
+        run: |
+          git config user.name  "Rate Scraper Bot"
+          git config user.email "bot@ohio-bill-optimizer.com"
+          git add public/rates.json
+          git diff --staged --quiet || git commit -m "chore: update Ohio electricity rates $(date +'%Y-%m-%d')"
+          git push
+
+      # Step 8: Notify you if the scrape failed
+      - name: Alert on failure
+        if: failure()
+        run: |
+          echo "SCRAPE FAILED — Check energychoice.ohio.gov manually"
+          echo "Rates were NOT updated this week"
+          # Optional: add email/Slack notification here later

@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ohio Bill Optimizer</title>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #F0F4FF;
+    --surface: #FFFFFF;
+    --surface2: #F8FAFF;
+    --border: #E2E8F0;
+    --border2: #CBD5E1;
+    --navy: #0F172A;
+    --slate: #475569;
+    --muted: #94A3B8;
+    --blue: #1E40AF;
+    --blue-light: #EFF6FF;
+    --blue-mid: #DBEAFE;
+    --green: #059669;
+    --green-light: #ECFDF5;
+    --green-mid: #D1FAE5;
+    --amber: #D97706;
+    --amber-light: #FFFBEB;
+    --font: 'Plus Jakarta Sans', system-ui, sans-serif;
+    --mono: 'JetBrains Mono', monospace;
+  }
+  body { font-family: var(--font); background: var(--bg); color: var(--navy); min-height: 100vh; }
+
+  .header {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 14px 24px; display: flex; align-items: center; gap: 12px;
+    position: sticky; top: 0; z-index: 100; box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  }
+  .logo-icon { width: 32px; height: 32px; background: var(--blue); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+  .logo-text { font-size: 15px; font-weight: 700; }
+  .logo-sub  { font-size: 11px; color: var(--muted); font-family: var(--mono); letter-spacing:.05em; }
+  .header-right { margin-left: auto; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+
+  .main { max-width: 720px; margin: 0 auto; padding: 32px 16px 64px; }
+
+  /* UPLOAD */
+  .hero-title { font-size: clamp(24px,5vw,34px); font-weight: 800; line-height: 1.15; margin-bottom: 10px; }
+  .hero-title span { color: var(--blue); }
+  .hero-sub { font-size: 15px; color: var(--slate); line-height: 1.6; max-width: 480px; margin-bottom: 28px; }
+  .upload-zone {
+    border: 2px dashed var(--border2); border-radius: 16px; padding: 48px 32px;
+    text-align: center; cursor: pointer; background: var(--surface); transition: all .2s;
+  }
+  .upload-zone:hover, .upload-zone.drag { border-color: var(--blue); background: var(--blue-light); }
+  .upload-icon  { font-size: 40px; margin-bottom: 14px; display: block; }
+  .upload-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+  .upload-sub   { font-size: 13px; color: var(--muted); }
+  .upload-pills { display: flex; gap: 8px; justify-content: center; margin-top: 16px; flex-wrap: wrap; }
+  .pill { background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--slate); }
+
+  /* ANALYZING */
+  .analyzing { text-align: center; padding: 60px 20px; }
+  .spinner { width: 48px; height: 48px; border: 3px solid var(--border); border-top-color: var(--blue); border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .steps { display: flex; flex-direction: column; gap: 8px; max-width: 300px; margin: 24px auto 0; text-align: left; }
+  .step-row { display: flex; align-items: center; gap: 10px; font-size: 13px; color: var(--muted); }
+  .step-row.active { color: var(--navy); font-weight: 500; }
+  .step-row.done   { color: var(--green); }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .step-row.active .step-dot { background: var(--blue); }
+  .step-row.done   .step-dot { background: var(--green); }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    background: var(--navy); border-radius: 14px; padding: 18px 20px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(90px,1fr)); gap: 16px; margin-bottom: 20px;
+  }
+  .summary-item label { font-size: 10px; color: #64748B; letter-spacing:.08em; text-transform: uppercase; display: block; margin-bottom: 4px; }
+  .summary-item value { font-size: 14px; font-weight: 600; color: #F8FAFC; font-family: var(--mono); }
+
+  /* SAVINGS BANNER */
+  .savings-banner {
+    background: linear-gradient(135deg, var(--green-light), #F0FDF4);
+    border: 1.5px solid #6EE7B7; border-radius: 16px; padding: 24px;
+    margin-bottom: 20px; display: flex; align-items: center; gap: 20px;
+  }
+  .savings-amount { flex-shrink: 0; text-align: center; }
+  .savings-amount .big { font-size: 42px; font-weight: 800; color: var(--green); font-family: var(--mono); line-height: 1; }
+  .savings-amount .per { font-size: 13px; color: var(--green); font-weight: 500; margin-top: 2px; }
+  .savings-divider { width: 1px; height: 60px; background: #A7F3D0; flex-shrink: 0; }
+  .savings-text h3 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .savings-text p  { font-size: 14px; color: var(--slate); line-height: 1.5; }
+  .savings-year { display: inline-block; margin-top: 8px; background: var(--green-mid); color: var(--green); font-size: 12px; font-weight: 600; padding: 3px 10px; border-radius: 20px; }
+
+  /* OPTIMIZED */
+  .optimized-banner {
+    background: var(--blue-light); border: 1.5px solid #93C5FD; border-radius: 16px;
+    padding: 20px 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 16px;
+  }
+
+  /* SECTION */
+  .section { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 20px; margin-bottom: 16px; }
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .section-title { font-size: 15px; font-weight: 700; }
+  .legend { font-size: 12px; color: var(--muted); display: flex; gap: 12px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+  /* CHARGES */
+  .charge-row { border-bottom: 1px solid var(--border); }
+  .charge-row:last-child { border-bottom: none; }
+  .charge-head { display: flex; justify-content: space-between; align-items: center; padding: 11px 0; cursor: pointer; }
+  .charge-left { display: flex; align-items: center; gap: 8px; }
+  .charge-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .charge-lbl  { font-size: 13px; }
+  .charge-right { display: flex; align-items: center; gap: 10px; }
+  .badge { font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; }
+  .badge-sw { background: var(--green-light); color: var(--green); }
+  .badge-fx { background: var(--surface2); color: var(--muted); }
+  .charge-amt { font-size: 13px; font-weight: 600; font-family: var(--mono); }
+  .chevron { font-size: 11px; color: var(--muted); margin-left: 4px; transition: transform .2s; display: inline-block; }
+  .chevron.open { transform: rotate(180deg); }
+  .charge-exp {
+    background: var(--surface2); border-left: 3px solid var(--blue-mid);
+    border-radius: 0 8px 8px 0; padding: 10px 14px; margin: 0 0 10px 15px;
+    font-size: 13px; color: var(--slate); line-height: 1.6; display: none;
+  }
+
+  /* SUPPLIER CARDS */
+  .supplier-card {
+    border: 1px solid var(--border); border-radius: 14px; padding: 18px 20px;
+    margin-bottom: 12px; position: relative; background: var(--surface); transition: box-shadow .2s;
+  }
+  .supplier-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.08); }
+  .supplier-card.best { border-color: #6EE7B7; box-shadow: 0 0 0 1px #6EE7B7; }
+  .best-badge { position: absolute; top: -1px; right: 16px; background: var(--green); color: white; font-size: 10px; font-weight: 700; padding: 3px 10px; border-radius: 0 0 8px 8px; letter-spacing:.05em; }
+  .card-row1 { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .card-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+  .card-addr { font-size: 12px; color: var(--muted); }
+  .card-save { text-align: right; }
+  .card-save .amt { font-size: 26px; font-weight: 800; color: var(--green); font-family: var(--mono); line-height: 1; }
+  .card-save .lbl { font-size: 11px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 5px; background: var(--surface2); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 12px; color: var(--slate); }
+  .chip .rate-v { font-family: var(--mono); font-weight: 600; color: var(--navy); }
+  .chip-green { background: var(--green-light); border-color: #A7F3D0; color: var(--green); }
+  .chip-blue  { background: var(--blue-light);  border-color: #BFDBFE;  color: var(--blue); }
+  .card-footer { margin-top: 12px; padding-top: 10px; border-top: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .card-phone { font-size: 12px; color: var(--slate); font-family: var(--mono); }
+  .card-yr    { font-size: 12px; color: var(--muted); }
+
+  /* SWITCH GUIDE */
+  .switch-guide { background: var(--navy); border-radius: 14px; padding: 20px 22px; margin-top: 4px; }
+  .switch-guide h3 { font-size: 14px; font-weight: 700; color: #F8FAFC; margin-bottom: 14px; }
+  .switch-step { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .switch-num  { width: 22px; height: 22px; background: var(--blue); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: white; flex-shrink: 0; margin-top: 1px; }
+  .switch-text { font-size: 13px; color: #CBD5E1; line-height: 1.5; }
+  .switch-text strong { color: #F1F5F9; }
+
+  /* MUNI NOTE */
+  .muni-note { background: var(--amber-light); border: 1px solid #FDE68A; border-radius: 12px; padding: 14px 18px; margin-top: 12px; }
+  .muni-note h4 { font-size: 13px; font-weight: 700; color: var(--amber); margin-bottom: 4px; }
+  .muni-note p  { font-size: 12px; color: #92400E; line-height: 1.6; }
+
+  /* FOOTER */
+  .data-date { text-align: center; font-size: 12px; color: var(--muted); margin-top: 24px; font-family: var(--mono); }
+  .retry-btn { width: 100%; margin-top: 16px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: var(--slate); font-size: 14px; cursor: pointer; font-family: var(--font); transition: background .15s; }
+  .retry-btn:hover { background: var(--surface2); }
+
+  /* ERROR */
+  .error-box { text-align: center; padding: 48px 20px; }
+  .error-btn  { background: var(--blue); color: white; border: none; border-radius: 10px; padding: 12px 28px; font-size: 14px; font-weight: 600; cursor: pointer; font-family: var(--font); margin-top: 16px; }
+
+  @media (max-width: 500px) {
+    .savings-banner { flex-direction: column; text-align: center; }
+    .savings-divider { width: 60px; height: 1px; }
+    .summary-bar { grid-template-columns: repeat(2,1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="logo-icon">⚡</div>
+  <div>
+    <div class="logo-text">Ohio Bill Optimizer</div>
+    <div class="logo-sub">POWERED BY GEMINI AI</div>
+  </div>
+  <div class="header-right" id="data-ts"></div>
+</div>
+
+<div class="main" id="root"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════
+//  ★  STEP 1 — PASTE YOUR GEMINI API KEY HERE
+//     Get it free at: aistudio.google.com → Get API Key
+// ════════════════════════════════════════════════════════════════
+const GEMINI_API_KEY = "PASTE_YOUR_KEY_HERE";
+
+// ════════════════════════════════════════════════════════════════
+//  ★  STEP 2 — MAKE SURE rates_clean.json IS IN THE SAME FOLDER
+//     as this HTML file. That's it — no other setup needed.
+// ════════════════════════════════════════════════════════════════
+
+// ─── RATES DATA (loaded from rates_clean.json) ──────────────────
+let RATES = {};
+
+fetch('./rates_clean.json')
+  .then(r => {
+    if (!r.ok) throw new Error('rates_clean.json not found in same folder');
+    return r.json();
+  })
+  .then(data => {
+    RATES = data;
+    document.getElementById('data-ts').textContent =
+      `Rates: ${data.last_updated_readable || 'loaded'}`;
+    render();
+  })
+  .catch(err => {
+    console.error('Could not load rates:', err.message);
+    document.getElementById('data-ts').textContent = '⚠ rates file not found';
+    render(); // still render — bill analysis will work, comparison will be empty
+  });
+
+// ─── UTILITY NAME → rates.json KEY MAPPING ──────────────────────
+// Maps what Gemini extracts from the bill → your rates.json keys
+const UTILITY_MAP = {
+  "duke":              "duke_energy_ohio",
+  "aep":               "aep_ohio",
+  "american electric": "aep_ohio",
+  "ohio edison":       "ohio_edison",
+  "illuminating":      "the_illuminating",
+  "toledo":            "toledo_edison",
+  "aes":               "aes_ohio",
+  "dp&l":              "aes_ohio",
+  "dayton":            "aes_ohio",
+};
+
+function matchUtility(name) {
+  if (!name) return null;
+  const lower = name.toLowerCase();
+  for (const [key, val] of Object.entries(UTILITY_MAP)) {
+    if (lower.includes(key)) return val;
+  }
+  return null;
+}
+
+// ─── SAVINGS CALCULATOR ──────────────────────────────────────────
+function findSavings(billData) {
+  const utilKey = matchUtility(billData.utility);
+  if (!utilKey || !RATES.utilities || !RATES.utilities[utilKey]) {
+    return { utilityData: null, savings: [] };
+  }
+
+  const utilityData  = RATES.utilities[utilKey];
+  const currentRate  = parseFloat(billData.currentRate);
+  const kwh          = parseFloat(billData.monthlyKwh);
+  if (!currentRate || !kwh) return { utilityData, savings: [] };
+
+  const savings = (utilityData.suppliers || [])
+    .filter(s => s.rate_kwh < currentRate && !s.intro_rate) // only real savings, no teasers
+    .map(s => ({
+      ...s,
+      monthlySavings: ((currentRate - s.rate_kwh) * kwh).toFixed(2),
+      yearlySavings:  Math.round((currentRate - s.rate_kwh) * kwh * 12),
+    }))
+    .sort((a, b) => parseFloat(b.monthlySavings) - parseFloat(a.monthlySavings));
+
+  return { utilityData, savings };
+}
+
+// ─── STATE ───────────────────────────────────────────────────────
+let state = { stage: "upload", billData: null, error: "" };
+let stepIndex = 0;
+let stepTimer = null;
+
+const STEPS = [
+  "Reading bill layout...",
+  "Extracting line items...",
+  "Identifying your supplier...",
+  "Calculating savings...",
+];
+
+// ─── FILE → BASE64 ───────────────────────────────────────────────
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload  = () => res(r.result.split(',')[1]);
+    r.onerror = rej;
+    r.readAsDataURL(file);
+  });
+}
+
+function mimeType(file) {
+  if (file.type === 'application/pdf') return 'application/pdf';
+  if (file.type === 'image/png')       return 'image/png';
+  if (file.type === 'image/webp')      return 'image/webp';
+  return 'image/jpeg';
+}
+
+// ─── ANALYZE BILL (Gemini API) ───────────────────────────────────
+async function analyzeBill(file) {
+  if (GEMINI_API_KEY === "PASTE_YOUR_KEY_HERE") {
+    state.error = "Add your Gemini API key inside the HTML file first (look for PASTE_YOUR_KEY_HERE near the top of the script).";
+    state.stage = "error";
+    render();
+    return;
+  }
+
+  state.stage = "analyzing";
+  stepIndex   = 0;
+  render();
+
+  stepTimer = setInterval(() => {
+    if (stepIndex < STEPS.length - 1) { stepIndex++; render(); }
+  }, 2200);
+
+  try {
+    const base64 = await toBase64(file);
+    const mime   = mimeType(file);
+
+    const prompt = `You are an expert at reading Ohio electricity bills.
+Extract all data from this bill and return ONLY valid JSON — no markdown, no explanation, no code fences.
+
+{
+  "utility": "utility company name (AEP Ohio, Duke Energy Ohio, Ohio Edison, The Illuminating Company, Toledo Edison, AES Ohio)",
+  "currentSupplier": "generation/supply/choice supplier name shown on bill, or null if on utility default",
+  "currentRate": 0.09299,
+  "monthlyKwh": 878,
+  "totalBill": 155.77,
+  "generationCharge": 81.67,
+  "deliveryCharge": 74.10,
+  "billPeriod": "April 2026",
+  "isOnDefault": false,
+  "isMunicipalAggregation": true,
+  "charges": [
+    {
+      "label": "exact line item name from bill",
+      "amount": "$34.86",
+      "explanation": "ONE short plain-English sentence, max 15 words: what this charge is",
+      "canChange": false
+    }
+  ]
+}
+
+Rules:
+- canChange = true ONLY for generation / supply / choice supplier charges
+- canChange = false for ALL delivery, distribution, riders, taxes, fees
+- currentRate = the per-kWh rate for generation/supply only
+- If no choice supplier found, isOnDefault = true
+- Include EVERY line item in the charges array
+- Keep every explanation under 15 words — be concise, not verbose
+- Return ONLY the JSON object, nothing before or after it`;
+
+    const resp = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: mime, data: base64 } },
+              { text: prompt }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096,        // raised from 2048 — bills with many charges need more room
+            responseMimeType: "application/json", // forces Gemini to return valid JSON, no markdown fences
+            thinkingConfig: { thinkingBudget: 0 }  // disables internal "thinking" tokens that were eating the budget
+          }
+        })
+      }
+    );
+
+    if (!resp.ok) {
+      const errBody = await resp.json();
+      console.error("Gemini API error:", errBody);
+      throw new Error(errBody.error?.message || `HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    console.log("Gemini raw response:", JSON.stringify(data).slice(0, 500));
+
+    const candidate = data.candidates?.[0];
+    if (!candidate) throw new Error("No candidate returned. Full response: " + JSON.stringify(data));
+
+    if (candidate.finishReason === "MAX_TOKENS") {
+      throw new Error("Response got cut off (bill has many charges). Token limit was raised \u2014 try again.");
+    }
+
+    const raw = candidate.content?.parts?.[0]?.text || "";
+    console.log("Raw text:", raw.slice(0, 300));
+
+    if (!raw) throw new Error("Empty response. Finish reason: " + (candidate.finishReason || "unknown"));
+
+    // Strip markdown fences — Gemini sometimes wraps JSON even when told not to
+    const clean = raw
+      .replace(/^```json\s*/i, "")
+      .replace(/^```\s*/i, "")
+      .replace(/\s*```$/i, "")
+      .trim();
+
+    clearInterval(stepTimer);
+    state.billData = JSON.parse(clean);
+    state.stage    = "results";
+
+  } catch (err) {
+    clearInterval(stepTimer);
+    console.error("Full error:", err);
+    // Show the REAL error message so you can debug
+    state.error = err.message || "Unknown error — check browser console (F12)";
+    state.stage = "error";
+  }
+  render();
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────
+function render() {
+  const root = document.getElementById("root");
+  if      (state.stage === "upload")    { root.innerHTML = uploadHTML();   wireUpload();   }
+  else if (state.stage === "analyzing") { root.innerHTML = analyzingHTML(); }
+  else if (state.stage === "error")     { root.innerHTML = errorHTML();    wireError();    }
+  else if (state.stage === "results")   { root.innerHTML = resultsHTML();  wireResults();  }
+}
+
+// ─── UPLOAD SCREEN ───────────────────────────────────────────────
+function uploadHTML() {
+  return `
+    <div style="margin-bottom:32px;">
+      <p class="hero-title">Stop overpaying for<br><span>Ohio electricity.</span></p>
+      <p class="hero-sub">Upload your utility bill. AI reads every charge, explains it in plain English, and finds you a better deal using live PUCO rates.</p>
+    </div>
+    <div class="upload-zone" id="dropzone">
+      <input type="file" id="file-input" accept="image/*,application/pdf" style="display:none">
+      <span class="upload-icon">📄</span>
+      <p class="upload-title">Drop your electric bill here</p>
+      <p class="upload-sub">or click to browse</p>
+      <div class="upload-pills">
+        <span class="pill">🔒 Never stored</span>
+        <span class="pill">⚡ ~10 seconds</span>
+        <span class="pill">JPG · PNG · PDF</span>
+        <span class="pill">Free</span>
+      </div>
+    </div>
+    <p style="margin-top:14px;font-size:12px;color:var(--muted);text-align:center;">
+      Supports: AEP Ohio · Duke Energy · Ohio Edison · AES Ohio · The Illuminating Company · Toledo Edison
+    </p>`;
+}
+
+function wireUpload() {
+  const zone  = document.getElementById("dropzone");
+  const input = document.getElementById("file-input");
+  zone.onclick  = () => input.click();
+  zone.ondragover  = e => { e.preventDefault(); zone.classList.add("drag"); };
+  zone.ondragleave = () => zone.classList.remove("drag");
+  zone.ondrop = e => { e.preventDefault(); zone.classList.remove("drag"); if (e.dataTransfer.files[0]) analyzeBill(e.dataTransfer.files[0]); };
+  input.onchange = e => { if (e.target.files[0]) analyzeBill(e.target.files[0]); };
+}
+
+// ─── ANALYZING SCREEN ────────────────────────────────────────────
+function analyzingHTML() {
+  return `<div class="analyzing">
+    <div class="spinner"></div>
+    <p style="font-size:17px;font-weight:700;margin-bottom:6px;">Analyzing your bill</p>
+    <p style="font-size:14px;color:var(--muted);">AI is reading every line item</p>
+    <div class="steps">
+      ${STEPS.map((s, i) => `
+        <div class="step-row ${i < stepIndex ? 'done' : i === stepIndex ? 'active' : ''}">
+          <span class="step-dot"></span><span>${i < stepIndex ? '✓ ' : ''}${s}</span>
+        </div>`).join("")}
+    </div>
+  </div>`;
+}
+
+// ─── ERROR SCREEN ────────────────────────────────────────────────
+function errorHTML() {
+  return `<div class="error-box">
+    <div style="font-size:40px;margin-bottom:16px;">⚠️</div>
+    <p style="font-size:20px;font-weight:700;margin-bottom:8px;">Something went wrong</p>
+    <p style="font-size:14px;color:var(--slate);margin-bottom:4px;">${state.error}</p>
+    <button class="error-btn" id="err-btn">Try Again</button>
+  </div>`;
+}
+function wireError() {
+  document.getElementById("err-btn").onclick = () => { state.stage = "upload"; render(); };
+}
+
+// ─── RESULTS SCREEN ──────────────────────────────────────────────
+function resultsHTML() {
+  const d = state.billData;
+  const { utilityData, savings } = findSavings(d);
+  const top  = savings[0];
+  const rate = parseFloat(d.currentRate);
+  const kwh  = parseFloat(d.monthlyKwh);
+
+  // Summary bar
+  const summary = `
+    <div class="summary-bar">
+      ${[
+        { label: "Utility",    val: d.utility || "—" },
+        { label: "Supplier",   val: d.currentSupplier || "Utility default" },
+        { label: "Your rate",  val: `$${rate.toFixed(4)}/kWh` },
+        { label: "Usage",      val: `${kwh} kWh` },
+        { label: "Total bill", val: `$${d.totalBill}` },
+        { label: "Period",     val: d.billPeriod || "—" },
+      ].map(i => `<div class="summary-item"><label>${i.label}</label><value>${i.val}</value></div>`).join("")}
+    </div>`;
+
+  // Savings or optimized banner
+  const alert = top ? `
+    <div class="savings-banner">
+      <div class="savings-amount">
+        <div class="big" id="counter">$0.00</div>
+        <div class="per">per month</div>
+      </div>
+      <div class="savings-divider"></div>
+      <div class="savings-text">
+        <h3>Switch to ${top.name}</h3>
+        <p>You pay <strong style="font-family:var(--mono)">$${rate.toFixed(4)}/kWh</strong>.
+           ${top.name} offers <strong style="font-family:var(--mono)">$${top.rate_kwh.toFixed(4)}/kWh</strong> fixed — no intro rate.</p>
+        <span class="savings-year">$${top.yearlySavings} saved per year</span>
+      </div>
+    </div>` : `
+    <div class="optimized-banner">
+      <div style="font-size:28px;flex-shrink:0">✅</div>
+      <div>
+        <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">You're on a competitive rate</h3>
+        <p style="font-size:13px;color:var(--slate)">No supplier on PUCO currently beats <strong style="font-family:var(--mono)">$${rate.toFixed(4)}/kWh</strong>. Keep checking monthly.</p>
+      </div>
+    </div>`;
+
+  // Charge breakdown
+  const charges = `
+    <div class="section">
+      <div class="section-head">
+        <span class="section-title">Your Bill Explained</span>
+        <span class="legend">
+          <span><span class="dot" style="background:var(--green)"></span>Can switch</span>
+          <span><span class="dot" style="background:var(--border2)"></span>Fixed</span>
+        </span>
+      </div>
+      ${(d.charges || []).map((c, i) => `
+        <div class="charge-row">
+          <div class="charge-head" onclick="toggleExp(${i})">
+            <div class="charge-left">
+              <span class="charge-dot" style="background:${c.canChange ? 'var(--green)' : 'var(--border2)'}"></span>
+              <span class="charge-lbl">${c.label}</span>
+              ${c.explanation ? `<span class="chevron" id="chv${i}">▾</span>` : ""}
+            </div>
+            <div class="charge-right">
+              <span class="badge ${c.canChange ? 'badge-sw' : 'badge-fx'}">${c.canChange ? 'switchable' : 'fixed'}</span>
+              <span class="charge-amt">${c.amount}</span>
+            </div>
+          </div>
+          ${c.explanation ? `<div class="charge-exp" id="exp${i}">${c.explanation}</div>` : ""}
+        </div>`).join("")}
+    </div>`;
+
+  // Supplier cards
+  const suppliers = savings.length > 0 ? `
+    <p class="section-title" style="margin-bottom:12px">Better Suppliers Available Now</p>
+    ${savings.slice(0, 4).map((s, i) => `
+      <div class="supplier-card ${i === 0 ? 'best' : ''}">
+        ${i === 0 ? '<span class="best-badge">BEST DEAL</span>' : ""}
+        <div class="card-row1">
+          <div>
+            <p class="card-name">${s.name}</p>
+            <p class="card-addr">${s.address || ""}</p>
+          </div>
+          <div class="card-save">
+            <div class="amt">$${s.monthlySavings}</div>
+            <div class="lbl">per month</div>
+          </div>
+        </div>
+        <div class="chips">
+          <span class="chip"><span class="rate-v">$${s.rate_kwh.toFixed(4)}</span>/kWh</span>
+          <span class="chip">${s.contract_months}-mo ${s.rate_type}</span>
+          <span class="chip ${s.etf === 0 ? 'chip-blue' : ''}">${s.etf === 0 ? '✓ No ETF' : 'ETF $' + s.etf}</span>
+          ${s.green           ? `<span class="chip chip-green">🌿 Green</span>` : ""}
+          ${s.month_to_month  ? `<span class="chip">Month-to-month</span>` : ""}
+        </div>
+        <div class="card-footer">
+          <span class="card-phone">${s.phone || ""}</span>
+          <span class="card-yr">$${s.yearlySavings}/year saved</span>
+        </div>
+      </div>`).join("")}` : "";
+
+  // Switch guide
+  const guide = top && utilityData ? `
+    <div class="switch-guide">
+      <h3>How to Switch — 5 Minutes</h3>
+      ${[
+        `Go to <strong>energychoice.ohio.gov</strong>`,
+        `Click <strong>Electric</strong> → select <strong>"${utilityData.display_name}"</strong>`,
+        `Find <strong>"${top.name}"</strong> in the table`,
+        `Click their enrollment link or call <strong>${top.phone || "their number"}</strong>`,
+        `<strong>${d.utility}</strong> keeps delivering — only your generation supplier changes`,
+        `New rate shows on your next month's bill. Zero service interruption.`,
+      ].map((s, i) => `
+        <div class="switch-step">
+          <span class="switch-num">${i + 1}</span>
+          <span class="switch-text">${s}</span>
+        </div>`).join("")}
+    </div>` : "";
+
+  // Municipal aggregation note
+  const muni = d.isMunicipalAggregation ? `
+    <div class="muni-note">
+      <h4>ℹ️ You're on a Municipal Aggregation Program</h4>
+      <p><strong>${d.currentSupplier}</strong> was chosen by your city or county — you may have been enrolled automatically. You can opt out anytime, no cancellation fees, and switch to any supplier above.</p>
+    </div>` : "";
+
+  return `
+    ${summary}
+    ${alert}
+    ${charges}
+    ${suppliers}
+    ${guide}
+    ${muni}
+    <div class="data-date">
+      Rates from energychoice.ohio.gov · ${RATES.last_updated_readable || ""} · Always verify before switching
+    </div>
+    <button class="retry-btn" id="restart">← Analyze another bill</button>`;
+}
+
+function wireResults() {
+  document.getElementById("restart").onclick = () => {
+    state.stage = "upload"; state.billData = null; render();
+  };
+  // Animate savings counter
+  const el  = document.getElementById("counter");
+  if (!el) return;
+  const { savings } = findSavings(state.billData);
+  const target = parseFloat(savings[0]?.monthlySavings || 0);
+  let cur = 0;
+  const interval = setInterval(() => {
+    cur = Math.min(cur + target / 40, target);
+    el.textContent = `$${cur.toFixed(2)}`;
+    if (cur >= target) clearInterval(interval);
+  }, 30);
+}
+
+// ─── TOGGLE CHARGE EXPLANATION ───────────────────────────────────
+function toggleExp(i) {
+  const exp = document.getElementById(`exp${i}`);
+  const chv = document.getElementById(`chv${i}`);
+  if (!exp) return;
+  const open = exp.style.display === "block";
+  exp.style.display = open ? "none" : "block";
+  if (chv) chv.classList.toggle("open", !open);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
