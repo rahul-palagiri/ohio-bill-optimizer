@@ -59,7 +59,7 @@ jobs:
 
       # Step 6: Copy fresh rates.json to where your React app reads it
       - name: Copy rates to app
-        run: cp scraper/data/rates.json public/rates_clean.json
+        run: cp scraper/data/rates.json rates_clean.json
 
       # Step 7: Commit and push the fresh data back to GitHub
       # Vercel watches your repo — a new commit triggers an auto-redeploy
@@ -67,7 +67,7 @@ jobs:
         run: |
           git config user.name  "Rate Scraper Bot"
           git config user.email "bot@ohio-bill-optimizer.com"
-          git add public/rates_clean.json
+          git add rates_clean.json
           git diff --staged --quiet || git commit -m "chore: update Ohio electricity rates $(date +'%Y-%m-%d')"
           git push
 
