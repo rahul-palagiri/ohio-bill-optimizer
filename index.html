@@ -190,13 +190,14 @@
 
 <script>
 // ════════════════════════════════════════════════════════════════
-//  ★  STEP 1 — PASTE YOUR GEMINI API KEY HERE
-//     Get it free at: aistudio.google.com → Get API Key
+//  Your API key now lives safely in Vercel's environment variables
+//  (Settings → Environment Variables → GEMINI_API_KEY)
+//  It is NEVER visible in this file or in the browser. The function
+//  in /api/analyze-bill.js holds it and talks to Gemini on your behalf.
 // ════════════════════════════════════════════════════════════════
-const GEMINI_API_KEY = "PASTE_YOUR_KEY_HERE";
 
 // ════════════════════════════════════════════════════════════════
-//  ★  STEP 2 — MAKE SURE rates_clean.json IS IN THE SAME FOLDER
+//  MAKE SURE rates_clean.json IS IN THE SAME FOLDER
 //     as this HTML file. That's it — no other setup needed.
 // ════════════════════════════════════════════════════════════════
 
@@ -296,15 +297,8 @@ function mimeType(file) {
   return 'image/jpeg';
 }
 
-// ─── ANALYZE BILL (Gemini API) ───────────────────────────────────
+// ─── ANALYZE BILL (via our backend, which holds the Gemini key) ──
 async function analyzeBill(file) {
-  if (GEMINI_API_KEY === "PASTE_YOUR_KEY_HERE") {
-    state.error = "Add your Gemini API key inside the HTML file first (look for PASTE_YOUR_KEY_HERE near the top of the script).";
-    state.stage = "error";
-    render();
-    return;
-  }
-
   state.stage = "analyzing";
   stepIndex   = 0;
   render();
@@ -350,32 +344,18 @@ Rules:
 - Keep every explanation under 15 words — be concise, not verbose
 - Return ONLY the JSON object, nothing before or after it`;
 
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{
-            parts: [
-              { inline_data: { mime_type: mime, data: base64 } },
-              { text: prompt }
-            ]
-          }],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 4096,        // raised from 2048 — bills with many charges need more room
-            responseMimeType: "application/json", // forces Gemini to return valid JSON, no markdown fences
-            thinkingConfig: { thinkingBudget: 0 }  // disables internal "thinking" tokens that were eating the budget
-          }
-        })
-      }
-    );
+    // Calls YOUR OWN backend function instead of Gemini directly.
+    // Your API key stays hidden on the server — never sent to this browser.
+    const resp = await fetch("/api/analyze-bill", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ base64, mime, prompt }),
+    });
 
     if (!resp.ok) {
       const errBody = await resp.json();
-      console.error("Gemini API error:", errBody);
-      throw new Error(errBody.error?.message || `HTTP ${resp.status}`);
+      console.error("Backend error:", errBody);
+      throw new Error(errBody.error || `HTTP ${resp.status}`);
     }
 
     const data = await resp.json();
