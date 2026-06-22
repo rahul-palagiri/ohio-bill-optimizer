@@ -258,11 +258,17 @@ function findSavings(billData) {
 
   const savings = (utilityData.suppliers || [])
     .filter(s => s.rate_kwh < currentRate && !s.intro_rate) // only real savings, no teasers
-    .map(s => ({
-      ...s,
-      monthlySavings: ((currentRate - s.rate_kwh) * kwh).toFixed(2),
-      yearlySavings:  Math.round((currentRate - s.rate_kwh) * kwh * 12),
-    }))
+    .map(s => {
+      const monthlyFee = s.monthly_fee || 0;
+      // Real saving = kWh savings minus any fixed monthly fee charged by supplier
+      const monthlySavings = ((currentRate - s.rate_kwh) * kwh) - monthlyFee;
+      return {
+        ...s,
+        monthlySavings: monthlySavings.toFixed(2),
+        yearlySavings:  Math.round(monthlySavings * 12),
+      };
+    })
+    .filter(s => parseFloat(s.monthlySavings) > 0) // drop suppliers where monthly fee wipes out savings
     .sort((a, b) => parseFloat(b.monthlySavings) - parseFloat(a.monthlySavings));
 
   return { utilityData, savings };
@@ -558,6 +564,7 @@ function resultsHTML() {
           <span class="chip ${s.etf === 0 ? 'chip-blue' : ''}">${s.etf === 0 ? '✓ No ETF' : 'ETF $' + s.etf}</span>
           ${s.green           ? `<span class="chip chip-green">🌿 Green</span>` : ""}
           ${s.month_to_month  ? `<span class="chip">Month-to-month</span>` : ""}
+          ${s.monthly_fee > 0 ? `<span class="chip" style="background:#FEF3C7;border-color:#FDE68A;color:#92400E;">+$${s.monthly_fee}/mo fee</span>` : ""}
         </div>
         <div class="card-footer">
           <span class="card-phone">${s.phone || ""}</span>

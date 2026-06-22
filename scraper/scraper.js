@@ -135,11 +135,12 @@ function buildSupplier(raw) {
     rate_type:       (raw.typeRaw || "").toLowerCase().includes("fixed") ? "fixed" : "variable",
     contract_months: contractMonths,
     month_to_month:  isMonthToMonth,
-    etf:             parseEtf(raw.etfRaw),     // Early termination fee ($)
+    etf:             parseEtf(raw.etfRaw),         // Early termination fee ($)
+    monthly_fee:     parseEtf(raw.monthlyFeeRaw),  // Fixed monthly charge on top of kWh rate
     intro_rate:      parseBool(raw.introRaw),
     green:           parseBool(raw.greenRaw),
-    promo_offers:    parseBool(raw.promoOffers), // boolean, not string
-    // Removed: product (duplicate of name), monthly_fee (was cloning ETF incorrectly)
+    promo_offers:    parseBool(raw.promoOffers),
+    // Removed: product (duplicate of name)
   };
 }
 
@@ -227,12 +228,14 @@ async function scrapeUtility(page, utility) {
         rows.push({
           supplier,
           rateRaw,
-          typeRaw:     getCol(cells, ["rate type", "type"]),
-          contract:    getCol(cells, ["term", "length"]),
-          etfRaw:      getCol(cells, ["early term", "termination"]),
-          introRaw:    getCol(cells, ["intro", "introductory"]),
-          greenRaw:    getCol(cells, ["renew", "content", "green"]),
-          promoOffers: getCol(cells, ["promo", "offers"]),
+          typeRaw:      getCol(cells, ["rate type", "type"]),
+          contract:     getCol(cells, ["term", "length"]),
+          etfRaw:       getCol(cells, ["early term", "termination"]),
+          introRaw:     getCol(cells, ["intro", "introductory"]),
+          greenRaw:     getCol(cells, ["renew", "content", "green"]),
+          promoOffers:  getCol(cells, ["promo", "offers"]),
+          // Use very specific keywords to avoid matching "Early Termination Fee"
+          monthlyFeeRaw: getCol(cells, ["monthly charge", "monthly service", "service charge", "monthly fee"]),
         });
       }
 
