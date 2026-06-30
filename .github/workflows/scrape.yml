@@ -41,24 +41,29 @@ jobs:
         working-directory: ./scraper
         run: npm install
 
-      # Step 4: Install Playwright's Chromium browser
-      # Using "node node_modules/.bin/playwright" instead of "npx playwright"
-      # avoids the "Permission denied" error some Actions runners throw with npx
+      # Step 4: Fix file permissions
+      # npm's cache sometimes restores binaries without execute permission
+      # on GitHub's runners — this is the standard fix for that
+      - name: Fix binary permissions
+        working-directory: ./scraper
+        run: chmod -R +x node_modules/.bin
+
+      # Step 5: Install Playwright's Chromium browser
       - name: Install Chromium
         working-directory: ./scraper
-        run: node node_modules/.bin/playwright install chromium --with-deps
+        run: npx playwright install chromium --with-deps
 
-      # Step 5: Run the scraper
+      # Step 6: Run the scraper
       - name: Run scraper
         working-directory: ./scraper
         run: node scraper.js
 
-      # Step 6: Copy fresh rates.json to project root
+      # Step 7: Copy fresh rates.json to project root
       # (matches your actual project — rates_clean.json sits at repo root, not in public/)
       - name: Copy rates to app
         run: cp scraper/data/rates.json rates_clean.json
 
-      # Step 7: Commit and push the fresh data back to GitHub
+      # Step 8: Commit and push the fresh data back to GitHub
       # Vercel watches your repo — a new commit triggers an auto-redeploy
       - name: Commit fresh rates
         run: |
@@ -68,7 +73,7 @@ jobs:
           git diff --staged --quiet || git commit -m "chore: update Ohio electricity rates $(date +'%Y-%m-%d')"
           git push
 
-      # Step 8: Notify you if the scrape failed
+      # Step 9: Notify you if the scrape failed
       - name: Alert on failure
         if: failure()
         run: |
