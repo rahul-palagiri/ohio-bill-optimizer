@@ -1,16 +1,11 @@
 # GitHub Actions Workflow — Ohio Rate Scraper
-# 
+#
 # What this does:
 #   Runs your scraper automatically every Monday at 8am Ohio time.
-#   Commits the fresh rates.json back to your repo.
+#   Commits the fresh rates_clean.json back to your repo.
 #   Vercel sees the new commit and auto-redeploys your app.
 #
 # Cost: FREE (GitHub Actions free tier = 2,000 minutes/month. This uses ~5 min/week)
-#
-# Setup steps (one time only):
-#   1. Push your project to GitHub
-#   2. This file goes in .github/workflows/scrape.yml
-#   3. That's it — GitHub runs it automatically every Monday
 
 name: Scrape Ohio Electricity Rates
 
@@ -19,8 +14,7 @@ on:
   schedule:
     - cron: "0 13 * * 1"
 
-  # Also lets you trigger it manually from GitHub's Actions tab
-  # (useful for testing or getting fresh data on demand)
+  # Lets you trigger it manually from GitHub's Actions tab
   workflow_dispatch:
 
 jobs:
@@ -32,11 +26,11 @@ jobs:
     steps:
       # Step 1: Check out your code
       - name: Checkout repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       # Step 2: Set up Node.js
       - name: Set up Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: "20"
           cache: "npm"
@@ -48,18 +42,20 @@ jobs:
         run: npm install
 
       # Step 4: Install Playwright's Chromium browser
+      # Using "node node_modules/.bin/playwright" instead of "npx playwright"
+      # avoids the "Permission denied" error some Actions runners throw with npx
       - name: Install Chromium
         working-directory: ./scraper
-        run: npx playwright install chromium --with-deps
+        run: node node_modules/.bin/playwright install chromium --with-deps
 
       # Step 5: Run the scraper
       - name: Run scraper
         working-directory: ./scraper
         run: node scraper.js
 
-      # Step 6: Copy fresh rates.json to where your React app reads it
+      # Step 6: Copy fresh rates.json to project root
+      # (matches your actual project — rates_clean.json sits at repo root, not in public/)
       - name: Copy rates to app
-
         run: cp scraper/data/rates.json rates_clean.json
 
       # Step 7: Commit and push the fresh data back to GitHub
@@ -78,4 +74,3 @@ jobs:
         run: |
           echo "SCRAPE FAILED — Check energychoice.ohio.gov manually"
           echo "Rates were NOT updated this week"
-          # Optional: add email/Slack notification here later
